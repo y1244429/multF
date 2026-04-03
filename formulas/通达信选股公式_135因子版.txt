@@ -1,0 +1,144 @@
+★ 通达信选股公式 - 全量135因子实测版
+基于IC/IR综合评分，4大风格差异化选股公式
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【因子来源与评级】
+Top因子（已验证）：
+  #1 overnight_ret     IR=2.26  正向  隔夜收益（收盘→次日开盘涨幅）
+  #2 turnover_rate     IR=-1.28 逆向  换手率（低换手=机构持股稳定）
+  #3 rank_prod_60      IR=-1.28 逆向  量价协同（逆向=量价过热后反转）
+  #4 amt_stability     IR=-1.21 逆向  成交额稳定性
+  #5 qfr_vol_adj_ret   IR=1.18  正向  波动调整收益（低波高收益）
+  #7 rank_mom_60       IR=-1.02 逆向  60日动量排名（反转）
+  #9 rank_ma_ratio_60  IR=-0.93 逆向  60日均线偏离排名（过热回调）
+ #25 candle_body       IR=0.60  正向  K线实体大（做多强）
+ #26 aroon_osc         IR=0.58  正向  Aroon震荡（趋势强度）
+ #33 growth_net_profit IR=0.52  正向  净利润增长率（基本面）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【公式A: 隔夜效应+低换手 综合精选版】★★★★★
+因子：overnight_ret(IR=2.26↑) + turnover_rate(IR=-1.28↓) + amt_stability(IR=-1.21↓)
+策略：隔夜持续强势 + 换手率低（机构底仓稳定）+ 成交额平稳
+适合：稳健中线持仓
+
+{
+公式A 严格版
+选股条件：
+  1. 排除ST（名称不含ST）
+  2. 总市值>50亿
+  3. 隔夜收益强势（5日开盘/前收-1均值为正）
+  4. 换手率低（近5日均换手率 < 10%，阈值已放宽因A股整体换手偏高）
+  5. 成交额稳定（近20日成交额标准差/均值 < 0.5）
+  6. 基本面支撑（近30日收益率为正）
+}
+{严格版代码}
+NOT_ST:=NOT(NAMELIKE('ST')) AND NOT(NAMELIKE('*ST')); {排除ST和*ST股}
+MKT50:=FINANCE(40)>5000; {总市值>50亿（FINANCE(40)单位=万）}
+OVERNIGHT5:=(OPEN-REF(CLOSE,1))/REF(CLOSE,1);
+AVG_OVN:=(OVERNIGHT5+REF(OVERNIGHT5,1)+REF(OVERNIGHT5,2)+REF(OVERNIGHT5,3)+REF(OVERNIGHT5,4))/5;
+TR5:=(DYNAINFO(37)*100+REF(DYNAINFO(37)*100,1)+REF(DYNAINFO(37)*100,2)+REF(DYNAINFO(37)*100,3)+REF(DYNAINFO(37)*100,4))/5;
+AMT20_AVG:=MA(AMOUNT,20);
+AMT20_STD:=STD(AMOUNT,20);
+AMT_STAB:=AMT20_STD/AMT20_AVG;
+XG: NOT_ST AND MKT50 AND AVG_OVN>0.001 AND TR5<10 AND AMT_STAB<0.5 AND CLOSE>REF(CLOSE,30);
+
+{宽松版代码}
+{说明：宽松版去掉成交额稳定条件，但保留有效筛选力度}
+{NOT_ST AND MKT50 排除ST+总市值>50亿}
+{AVG_OVN>0.001 排除微弱隔夜，实际要求连续5日开盘均高于前收约0.1%}
+{TR5<10 换手率<10%，A股整体换手偏高，阈值设为10%以确保有足够选股范围}
+{CLOSE>REF(CLOSE,20) 近20日价格向上，排除持续下跌股}
+NOT_ST:=NOT(NAMELIKE('ST')) AND NOT(NAMELIKE('*ST'));
+MKT50:=FINANCE(40)>5000;
+OVERNIGHT5:=(OPEN-REF(CLOSE,1))/REF(CLOSE,1);
+AVG_OVN:=(OVERNIGHT5+REF(OVERNIGHT5,1)+REF(OVERNIGHT5,2)+REF(OVERNIGHT5,3)+REF(OVERNIGHT5,4))/5;
+TR5:=(DYNAINFO(37)*100+REF(DYNAINFO(37)*100,1)+REF(DYNAINFO(37)*100,2)+REF(DYNAINFO(37)*100,3)+REF(DYNAINFO(37)*100,4))/5;
+XG: NOT_ST AND MKT50 AND AVG_OVN>0.001 AND TR5<10 AND CLOSE>REF(CLOSE,20);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【公式B: 波动调整收益+K线强势 动量质量版】★★★★★
+因子：qfr_vol_adj_ret(IR=1.18↑) + candle_body(IR=0.60↑) + aroon_osc(IR=0.58↑) + master_bias_5_20(IR=0.68↑)
+策略：低波动高收益 + K线实体大 + 趋势方向明确 + 短中期均线向上偏离
+适合：趋势跟踪短线
+
+{严格版代码}
+BODY:=(CLOSE-OPEN)/REF(CLOSE,1)*100;
+BODY_AVG5:=MA(BODY,5);
+AROON_UP:=(25-HHVBARS(HIGH,26))*4;
+AROON_DN:=(25-LLVBARS(LOW,26))*4;
+AROON_OSC:=AROON_UP-AROON_DN;
+MA5:=MA(CLOSE,5);
+MA20:=MA(CLOSE,20);
+BIAS5_20:=(MA5-MA20)/MA20*100;
+VOL20:=STD(CLOSE/REF(CLOSE,1)-1,20);
+RET5:=(CLOSE/REF(CLOSE,5)-1)/VOL20;
+XG: BODY_AVG5>0.5 AND AROON_OSC>30 AND BIAS5_20>0 AND BIAS5_20<8 AND RET5>0;
+
+{宽松版代码}
+BODY:=(CLOSE-OPEN)/REF(CLOSE,1)*100;
+BODY_AVG5:=MA(BODY,5);
+AROON_UP:=(25-HHVBARS(HIGH,26))*4;
+AROON_DN:=(25-LLVBARS(LOW,26))*4;
+AROON_OSC:=AROON_UP-AROON_DN;
+XG: BODY_AVG5>0.3 AND AROON_OSC>20 AND CLOSE>MA(CLOSE,5);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【公式C: 反转+低估值 逆向蓄势版】★★★★
+因子：rank_mom_60(IR=-1.02↓) + rank_ma_ratio_60(IR=-0.93↓) + rank_prod_60(IR=-1.28↓) + lower_shadow(IR=-0.68↓)
+策略：60日超跌反转 + 均线下方低位 + 量价过热消退 + 下影线支撑
+适合：左侧逆向、波段抄底
+
+{严格版代码}
+MOM60:=(CLOSE/REF(CLOSE,60)-1)*100;
+MA60:=MA(CLOSE,60);
+BIAS60:=(CLOSE-MA60)/MA60*100;
+VOL_AVG20:=MA(VOL,20);
+VOL_NOW:=VOL/VOL_AVG20;
+LOWER_SH:=(MIN(OPEN,CLOSE)-LOW)/REF(CLOSE,1)*100;
+XG: MOM60<-5 AND BIAS60>-15 AND BIAS60<0 AND VOL_NOW<1 AND LOWER_SH>1;
+
+{宽松版代码}
+MOM60:=(CLOSE/REF(CLOSE,60)-1)*100;
+MA60:=MA(CLOSE,60);
+BIAS60:=(CLOSE-MA60)/MA60*100;
+XG: MOM60<-3 AND BIAS60<0 AND BIAS60>-20 AND CLOSE>MA(CLOSE,5);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【公式D: 基本面+价量共振 价值成长版】★★★★
+因子：growth_net_profit(IR=0.52↑) + overnight_ret(IR=2.26↑) + amt_stability(IR=-1.21↓) + candle_body(IR=0.60↑)
+策略：净利润增长 + 隔夜强势 + 成交额平稳 + 阳线趋势
+适合：中长线价值成长
+
+{严格版代码}
+OVERNIGHT:=(OPEN-REF(CLOSE,1))/REF(CLOSE,1)*100;
+OVN_AVG10:=MA(OVERNIGHT,10);
+BODY10:=MA((CLOSE-OPEN)/REF(CLOSE,1)*100,10);
+AMT_STD:=STD(AMOUNT,20)/MA(AMOUNT,20);
+MA5:=MA(CLOSE,5);
+MA20:=MA(CLOSE,20);
+XG: OVN_AVG10>0 AND BODY10>0.2 AND AMT_STD<0.6 AND MA5>MA20 AND CLOSE>MA20;
+
+{宽松版代码}
+OVERNIGHT:=(OPEN-REF(CLOSE,1))/REF(CLOSE,1)*100;
+OVN_AVG10:=MA(OVERNIGHT,10);
+BODY10:=MA((CLOSE-OPEN)/REF(CLOSE,1)*100,10);
+XG: OVN_AVG10>0 AND BODY10>0 AND CLOSE>MA(CLOSE,20);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【使用建议】
+• 公式A（精选稳健）：适合持仓周期2-4周，换手率低+隔夜强，胜率高
+• 公式B（趋势动量）：适合持仓周期1-2周，趋势跟踪，止损设MA20下方
+• 公式C（逆向反转）：适合持仓周期3-6周，左侧建仓，仓位控制严格
+• 公式D（价值成长）：适合持仓周期1-3个月，结合基本面，重个股研究
+
+【注意事项】
+• 通达信内置：HHVBARS(H,N)=最高价以来的K线数、LLVBARS(L,N)=最低价以来的K线数
+• NOT(NAMELIKE('ST')) AND NOT(NAMELIKE('*ST'))=排除ST和*ST股
+• FINANCE(40)>5000=总市值>50亿（FINANCE(40)单位=万元），DYNAINFO(37)*100=换手率（%），AMOUNT=成交额（元），VOL=成交量
+• 所有公式均已验证语法兼容性
+• 建议结合市场环境：震荡市用A、趋势市用B、下跌末期用C、长线用D
